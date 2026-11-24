@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Wave — Analyse des leads</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f4f6fa;--panel:#fff;--ink:#172033;--muted:#687386;--line:#e5e9f0;--blue:#315efb;--navy:#172b4d;--green:#138a63;--orange:#c77918;--red:#c34d55;--shadow:0 8px 28px rgba(26,42,75,.07)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,Segoe UI,Arial,sans-serif}
+header{background:linear-gradient(115deg,#142544,#244b83);color:white;padding:26px max(22px,calc((100% - 1280px)/2))}
+header .top{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap}
+.brand{font-size:12px;letter-spacing:2px;text-transform:uppercase;opacity:.75;font-weight:700}
+h1{font-size:25px;margin:5px 0 3px}header p{margin:0;color:#d5e0f1}
+main{max-width:1280px;margin:24px auto;padding:0 20px 42px}
+.toolbar,.panel,.kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.toolbar{padding:17px;display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:18px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:160px}.field label{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700}
+input[type=file],select,input[type=date]{font:inherit;border:1px solid #d9dfeb;border-radius:8px;padding:9px 10px;background:#fff;color:var(--ink);min-height:39px}
+button{border:0;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer;background:var(--blue);color:#fff;font-size:13px}
+button.secondary{background:#edf1f8;color:#29364c}button:disabled{opacity:.45;cursor:not-allowed}
+.status{margin-left:auto;color:var(--muted);font-size:12px;max-width:300px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
+.kpi{padding:15px 16px}.kpi .label{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px}.kpi .value{font-size:25px;font-weight:800;margin-top:5px;letter-spacing:-.5px}.kpi .sub{font-size:11px;color:var(--muted);margin-top:2px}
+.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}.panel{padding:19px;margin-bottom:16px;min-width:0}
+.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px}.panel h2{font-size:17px;margin:0}.hint{color:var(--muted);font-size:12px;margin-top:3px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th{text-align:left;color:#647087;font-size:11px;text-transform:uppercase;letter-spacing:.45px;background:#f7f8fb;padding:10px 9px}td{padding:9px;border-bottom:1px solid var(--line)}td.num,th.num{text-align:right}tbody tr:last-child td{border-bottom:0}.total td{font-weight:800;background:#f7f9fc;border-top:1px solid #dce2ec}
+.pill{display:inline-block;padding:3px 8px;border-radius:20px;background:#edf2ff;color:#3152c5;font-size:11px;font-weight:700}
+.barcell{width:30%}.bar{height:7px;background:#edf0f5;border-radius:9px;overflow:hidden}.bar span{display:block;height:100%;background:#5477f4;border-radius:9px}
+.metrics-table td:first-child{color:#48546a}.metrics-table td:nth-child(2){font-weight:750}
+.note{background:#fff8e9;border:1px solid #f2e3c4;color:#76531e;border-radius:10px;padding:11px 13px;font-size:12px;margin-top:14px}
+.empty{padding:32px 15px;text-align:center;color:var(--muted)}.empty strong{display:block;color:var(--ink);font-size:15px;margin-bottom:5px}
+.footer{font-size:11px;color:var(--muted);margin-top:10px}
+.scroll{overflow-x:auto}.rk{text-align:center;width:44px;font-weight:800;font-size:15px}.hm{text-align:center}td.hm{font-weight:700}h3.sec{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:26px 0 12px}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
+@media(max-width:520px){main{padding:0 12px 28px}.kpis{grid-template-columns:1fr 1fr}.kpi .value{font-size:21px}.panel{padding:13px;overflow-x:auto}.toolbar .field{width:100%}.status{margin-left:0}}
+@media print{body{background:#fff}header{padding:18px 0;background:#fff;color:#111;border-bottom:2px solid #223}header p{color:#555}main{max-width:none;margin:12px 0;padding:0}.toolbar button,.toolbar input,.toolbar select{display:none}.toolbar{box-shadow:none;border:0;padding:0}.panel,.kpi{box-shadow:none;break-inside:avoid}.grid{grid-template-columns:1fr 1fr}.kpis{grid-template-columns:repeat(5,1fr)}}
+</style>
+</head>
+<body>
+<header><div class="top"><div><div class="brand">THE WAVE · PILOTAGE LEADS</div><h1>Tableau de suivi des leads</h1><p>Répartition des statuts et performance de conversion</p></div><div class="pill" style="background:#ffffff20;color:white">Analyse Excel</div></div></header>
+<main>
+<section class="toolbar">
+ <div class="field" style="min-width:260px;flex:1"><label>Fichier source Excel</label><input id="file" type="file" accept=".xlsx,.xls,.csv"></div>
+ <div class="field"><label>Agent</label><select id="agent"><option value="">Tous les agents</option></select></div>
+ <div class="field"><label>Du</label><input id="from" type="date"></div>
+ <div class="field"><label>Au</label><input id="to" type="date"></div>
+ <button id="reset" class="secondary">Réinitialiser</button><button id="export" class="secondary" disabled>Exporter CSV</button><button id="print" class="secondary" disabled>Imprimer</button>
+ <div class="status" id="status">Importe le fichier Excel pour générer les tableaux.</div>
+</section>
+<div id="dashboard">
+ <div class="empty panel"><strong>En attente du fichier source</strong>Choisis le fichier « SUIVI LEADS THE WAVE QUOTIDIEN.xlsx » pour afficher les statistiques.</div>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let allRows=[], currentRows=[], lastStats=null;
+const norm=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+function classify(raw){
+ const s=norm(raw);
+ if(!s)return null;
+ if(s.includes('d n c m')||s.includes('dncm'))return 'DNCM';
+ if(s.includes('faux numero'))return 'Faux Numéro';
+ if(s.includes('injoignable'))return 'Injoignable + 4 tentatives';
+ if(s==='nrp'||s.includes('nrp'))return 'NRP';
+ if(s.includes('rappel'))return 'Rappel';
+ if(s.includes('vente'))return 'Vente';
+ if(s.includes('refus')&&s.includes('trop cher'))return 'Refus : Trop cher';
+ if(s.includes('refus')&&s.includes('pas interesse'))return 'Refus : Pas intéressé';
+ if(s.includes('refus')&&s.includes('repondre'))return 'Refus de répondre';
+ if(s.includes('hors cible')||s.includes('techniquement impossible')||/\bdette\b/.test(s))return 'Hors cible';
+ if(s.includes('repondeur'))return 'Répondeur';
+ return 'Autre / à vérifier';
+}
+const order=['DNCM','Faux Numéro','Hors cible','Injoignable + 4 tentatives','NRP','Rappel','Refus : Pas intéressé','Refus : Trop cher','Refus de répondre','Répondeur','Vente','Autre / à vérifier'];
+function parseDate(v){
+ if(v instanceof Date&&!isNaN(v))return v;
+ if(typeof v==='number'){const d=XLSX.SSF.parse_date_code(v);if(d)return new Date(d.y,d.m-1,d.d)}
+ if(v){let d=new Date(v);if(!isNaN(d))return d}
+ return null;
+}
+function fmt(n){return Math.round(n).toLocaleString('fr-FR')}
+function pct(n,d){return d?((n/d)*100).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%':'0,00%'}
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function loadWorkbook(wb){
+ const sheet=wb.Sheets['Tabelle1']||wb.Sheets[wb.SheetNames[0]];
+ const raw=XLSX.utils.sheet_to_json(sheet,{defval:'',raw:true});
+ if(!raw.length)throw Error('Aucune ligne de données trouvée.');
+ const keys=Object.keys(raw[0]);
+ const findKey=(names)=>keys.find(k=>names.includes(norm(k)));
+ const kAgent=findKey(['agent']),kStatus=findKey(['commentaires','statuts','statut']),kTime=findKey(['timestamp','date']);
+ if(!kStatus)throw Error('Colonne « Commentaires » introuvable dans le fichier.');
+ allRows=raw.map((r,i)=>({agent:String(r[kAgent]||'Non renseigné').trim()||'Non renseigné',rawStatus:String(r[kStatus]||'').trim(),status:classify(r[kStatus]),date:parseDate(r[kTime]),sourceRow:i+2})).filter(r=>r.status);
+ const agents=[...new Set(allRows.map(r=>r.agent))].sort((a,b)=>a.localeCompare(b,'fr'));
+ $('agent').innerHTML='<option value="">Tous les agents</option>'+agents.map(a=>`<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+ $('export').disabled=false;$('print').disabled=false;
+ $('status').textContent=`${fmt(allRows.length)} leads avec statut chargés · ${fmt(raw.length-allRows.length)} ligne(s) sans statut`;
+ render();
+}
+function render(){
+ const agent=$('agent').value,from=$('from').value,to=$('to').value;
+ currentRows=allRows.filter(r=>(!agent||r.agent===agent)&&(!from||(r.date&&r.date>=new Date(from+'T00:00:00')))&&(!to||(r.date&&r.date<=new Date(to+'T23:59:59'))));
+ const counts=Object.fromEntries(order.map(s=>[s,0]));currentRows.forEach(r=>counts[r.status]=(counts[r.status]||0)+1);
+ const total=currentRows.length, hc=counts['Hors cible'], refus=counts['Refus : Pas intéressé']+counts['Refus : Trop cher']+counts['Refus de répondre'], rappel=counts['Rappel'],vente=counts['Vente'];
+ // Décrochés = Refus (3 types) + Vente + Hors cible + Faux Numéro + Rappel
+ const decroches=refus+vente+hc+counts['Faux Numéro']+rappel;
+ lastStats={counts,total,hc,refus,rappel,vente,decroches};
+ const rows=order.filter(s=>counts[s]>0||s!=='Autre / à vérifier').map(s=>`<tr><td>${escapeHtml(s)}</td><td class="num">${fmt(counts[s])}</td><td class="num">${pct(counts[s],total)}</td><td class="barcell"><div class="bar"><span style="width:${total?counts[s]/total*100:0}%"></span></div></td></tr>`).join('');
+ $('dashboard').innerHTML=`
+ <section class="kpis">
+  <div class="kpi"><div class="label">Leads reçus</div><div class="value">${fmt(total)}</div><div class="sub">Statuts renseignés</div></div>
+  <div class="kpi"><div class="label">Décrochés</div><div class="value">${fmt(decroches)}</div><div class="sub">${pct(decroches,total)} des leads</div></div>
+  <div class="kpi"><div class="label">Hors cible</div><div class="value">${fmt(hc)}</div><div class="sub">${pct(hc,total)} des leads</div></div>
+  <div class="kpi"><div class="label">Refus</div><div class="value">${fmt(refus)}</div><div class="sub">${pct(refus,total)} des leads</div></div>
+  <div class="kpi"><div class="label">Ventes</div><div class="value">${fmt(vente)}</div><div class="sub">${pct(vente,total)} des leads</div></div>
+ </section>
+ <div class="grid">
+  <section class="panel"><div class="panel-head"><div><h2>1. Répartition des statuts</h2><div class="hint">Volumes et poids de chaque statut dans le total filtré</div></div><span class="pill">${fmt(total)} leads</span></div>
+   <table><thead><tr><th>Statuts</th><th class="num">Volume</th><th class="num">Poids</th><th></th></tr></thead><tbody>${rows}<tr class="total"><td>Total</td><td class="num">${fmt(total)}</td><td class="num">100,00%</td><td></td></tr></tbody></table>
+  </section>
+  <section class="panel"><div class="panel-head"><div><h2>2. Synthèse des performances</h2><div class="hint">Indicateurs calculés sur les leads filtrés</div></div></div>
+   <table class="metrics-table"><thead><tr><th>Indicateur</th><th class="num">Volume</th><th class="num">Taux</th></tr></thead><tbody>
+   <tr><td>Volume reçu</td><td class="num">${fmt(total)}</td><td class="num">100,00%</td></tr>
+   <tr><td>Décrochés</td><td class="num">${fmt(decroches)}</td><td class="num">${pct(decroches,total)}</td></tr>
+   <tr><td>Hors cible</td><td class="num">${fmt(hc)}</td><td class="num">${pct(hc,total)}</td></tr>
+   <tr><td>Refus</td><td class="num">${fmt(refus)}</td><td class="num">${pct(refus,total)}</td></tr>
+   <tr><td>Rappels</td><td class="num">${fmt(rappel)}</td><td class="num">${pct(rappel,total)}</td></tr>
+   <tr><td>Ventes</td><td class="num">${fmt(vente)}</td><td class="num">${pct(vente,total)}</td></tr>
+   <tr class="total"><td>% HC</td><td class="num">—</td><td class="num">${pct(hc,total)}</td></tr>
+   <tr class="total"><td>% décroché</td><td class="num">—</td><td class="num">${pct(decroches,total)}</td></tr>
+   <tr class="total"><td>Vente / leads livrés</td><td class="num">—</td><td class="num">${pct(vente,total)}</td></tr>
+   <tr class="total"><td>Vente / appels décrochés</td><td class="num">—</td><td class="num">${pct(vente,decroches)}</td></tr>
+   </tbody></table>
+  </section>
+ </div>`;
+ $('dashboard').insertAdjacentHTML('beforeend',extraSections());
+}
+function extraSections(){
+ const M=rs=>{const c={};rs.forEach(r=>c[r.status]=(c[r.status]||0)+1);const g=k=>c[k]||0;const refus=g('Refus : Pas intéressé')+g('Refus : Trop cher')+g('Refus de répondre');const hc=g('Hors cible'),vente=g('Vente'),rappel=g('Rappel');return{c,total:rs.length,hc,refus,vente,rappel,dec:refus+vente+hc+g('Faux Numéro')+rappel}};
+ const group=fn=>{const m=new Map();currentRows.forEach(r=>{const k=fn(r);if(k===null)return;if(!m.has(k))m.set(k,[]);m.get(k).push(r)});return [...m]};
+ const agents=group(r=>r.agent).map(([name,rs])=>({name,...M(rs)}));
+ agents.sort((a,b)=>b.vente-a.vente||(b.dec?b.vente/b.dec:0)-(a.dec?a.vente/a.dec:0)||b.total-a.total);
+ lastStats.agents=agents;
+ if(!agents.length)return '';
+ const medal=i=>['🥇','🥈','🥉'][i]||(i+1);
+ const maxV=Math.max(...agents.map(a=>a.vente),1);
+ const rank=`<h3 class='sec'>Performance par agent</h3><section class='panel'><div class='panel-head'><div><h2>3. Classement des agents</h2><div class='hint'>Classés par nombre de ventes, puis par ventes / décrochés</div></div><span class='pill'>${agents.length} agent(s)</span></div><div class='scroll'><table><thead><tr><th class='hm'>#</th><th>Agent</th><th class='num'>Leads</th><th class='num'>Décrochés</th><th class='num'>% décroché</th><th class='num'>Hors cible</th><th class='num'>Refus</th><th class='num'>Rappels</th><th class='num'>Ventes</th><th class='num'>Vente / leads</th><th class='num'>Vente / décrochés</th><th></th></tr></thead><tbody>${agents.map((a,i)=>`<tr><td class='rk'>${medal(i)}</td><td><b>${escapeHtml(a.name)}</b></td><td class='num'>${fmt(a.total)}</td><td class='num'>${fmt(a.dec)}</td><td class='num'>${pct(a.dec,a.total)}</td><td class='num'>${fmt(a.hc)}</td><td class='num'>${fmt(a.refus)}</td><td class='num'>${fmt(a.rappel)}</td><td class='num'><b>${fmt(a.vente)}</b></td><td class='num'>${pct(a.vente,a.total)}</td><td class='num'>${pct(a.vente,a.dec)}</td><td class='barcell'><div class='bar'><span style='width:${a.vente/maxV*100}%'></span></div></td></tr>`).join('')}</tbody></table></div></section>`;
+ const tbl=(title,hint,col,items)=>{const mx=Math.max(...items.map(i=>i[1].total),1);return `<section class='panel'><div class='panel-head'><div><h2>${title}</h2><div class='hint'>${hint}</div></div></div><div class='scroll'><table><thead><tr><th>${col}</th><th class='num'>Leads</th><th class='num'>Décrochés</th><th class='num'>% décroché</th><th class='num'>Ventes</th><th class='num'>% vente</th><th></th></tr></thead><tbody>${items.map(([l,m])=>`<tr><td>${escapeHtml(l)}</td><td class='num'>${fmt(m.total)}</td><td class='num'>${fmt(m.dec)}</td><td class='num'>${pct(m.dec,m.total)}</td><td class='num'>${fmt(m.vente)}</td><td class='num'>${pct(m.vente,m.total)}</td><td class='barcell'><div class='bar'><span style='width:${m.total/mx*100}%'></span></div></td></tr>`).join('')}</tbody></table></div></section>`};
+ const days=group(r=>r.date?r.date.getFullYear()+'-'+String(r.date.getMonth()+1).padStart(2,'0')+'-'+String(r.date.getDate()).padStart(2,'0'):null).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,rs])=>[k.split('-').reverse().join('/'),M(rs)]);
+ const hasH=currentRows.some(r=>r.date&&(r.date.getHours()||r.date.getMinutes()));
+ const hours=hasH?group(r=>r.date?r.date.getHours():null).sort((a,b)=>a[0]-b[0]).map(([h,rs])=>[h+'h – '+(h+1)+'h',M(rs)]):[];
+ const dayP=days.length?tbl('4. Évolution par jour','Volume, décrochés et ventes pour chaque date','Date',days):'';
+ const hourP=hours.length?tbl('5. Par tranche horaire','Heure de saisie du lead (timestamp)','Tranche',hours):'';
+ const time=dayP&&hourP?`<div class='grid'>${dayP}${hourP}</div>`:dayP+hourP;
+ const cols=order.filter(s=>s!=='Autre / à vérifier'||currentRows.some(r=>r.status===s));
+ const matrix=`<section class='panel'><div class='panel-head'><div><h2>6. Détail des statuts par agent</h2><div class='hint'>Nombre de leads par statut ; l'intensité de la couleur reflète le poids du statut chez l'agent</div></div></div><div class='scroll'><table><thead><tr><th>Agent</th>${cols.map(s=>`<th class='num'>${escapeHtml(s)}</th>`).join('')}<th class='num'>Total</th></tr></thead><tbody>${agents.map(a=>`<tr><td><b>${escapeHtml(a.name)}</b></td>${cols.map(s=>{const n=a.c[s]||0;return `<td class='hm' style='background:rgba(84,119,244,${a.total?(n/a.total*0.7).toFixed(2):0})'>${fmt(n)}</td>`}).join('')}<td class='num'><b>${fmt(a.total)}</b></td></tr>`).join('')}</tbody></table></div></section>`;
+ return rank+(time?`<h3 class='sec'>Évolution dans le temps</h3>`+time:'')+`<h3 class='sec'>Détail par agent</h3>`+matrix;
+}
+$('file').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{if(!window.XLSX)throw Error('La bibliothèque Excel ne se charge pas. Vérifie ta connexion Internet puis recharge la page.');const data=await f.arrayBuffer();const wb=XLSX.read(data,{type:'array',cellDates:true});loadWorkbook(wb)}catch(err){$('status').textContent='Erreur : '+err.message;alert(err.message)}});
+['agent','from','to'].forEach(id=>$(id).addEventListener('change',()=>{if(allRows.length)render()}));
+$('reset').addEventListener('click',()=>{$('agent').value='';$('from').value='';$('to').value='';if(allRows.length)render()});
+$('print').addEventListener('click',()=>window.print());
+$('export').addEventListener('click',()=>{if(!lastStats)return;const {counts,total,hc,refus,rappel,vente,decroches}=lastStats;const data=[['Statuts','Volume','Poids'],...order.filter(s=>counts[s]>0||s!=='Autre / à vérifier').map(s=>[s,counts[s],total?counts[s]/total:0]),['Total',total,1],[],['Indicateur','Volume','Taux'],['Volume reçu',total,1],['Décrochés',decroches,total?decroches/total:0],['Hors cible',hc,total?hc/total:0],['Refus',refus,total?refus/total:0],['Rappels',rappel,total?rappel/total:0],['Ventes',vente,total?vente/total:0],['% HC','',total?hc/total:0],['% décroché','',total?decroches/total:0],['Vente / leads livrés','',total?vente/total:0],['Vente / appels décrochés','',decroches?vente/decroches:0],[],['Classement agents'],['Agent','Leads','Décrochés','% décroché','Hors cible','Refus','Rappels','Ventes','Vente / leads','Vente / décrochés'],...(lastStats.agents||[]).map(a=>[a.name,a.total,a.dec,a.total?a.dec/a.total:0,a.hc,a.refus,a.rappel,a.vente,a.total?a.vente/a.total:0,a.dec?a.vente/a.dec:0])];const csv=data.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='statistiques_leads_the_wave.csv';a.click();URL.revokeObjectURL(a.href)});
+</script>
+</body></html>
